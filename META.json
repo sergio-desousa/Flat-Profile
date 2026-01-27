@@ -1,7 +1,7 @@
 {
-   "abstract" : "It's new $module",
+   "abstract" : "Streaming-first profiling for CSV/TSV flat files",
    "author" : [
-      "Sergio de Sousa <sergio@serso.com>"
+      "Sergio de Sousa"
    ],
    "dynamic_config" : 0,
    "generated_by" : "Minilla/v3.1.29, CPAN::Meta::Converter version 2.150010",
@@ -53,6 +53,9 @@
    },
    "release_status" : "unstable",
    "version" : "0.01",
+   "x_contributors" : [
+      "Sergio de Sousa <sergio@serso.com>"
+   ],
    "x_serialization_backend" : "JSON::PP version 4.16",
    "x_static_install" : 1
 }

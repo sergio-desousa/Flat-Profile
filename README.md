@@ -1,23 +1,48 @@
 
 # NAME
 
-Flat::Profile - It's new $module
+Flat::Profile - Streaming-first profiling for CSV/TSV flat files
 
 # SYNOPSIS
 
     use Flat::Profile;
 
+    my $profiler = Flat::Profile->new();
+
+    # Planned API (not implemented yet):
+    # my $report   = $profiler->profile_file(path => "data.csv", has_header => 1);
+    # my $iterator = $profiler->iter_rows(path => "data.csv", has_header => 1);
+
 # DESCRIPTION
 
-Flat::Profile is ...
+Flat::Profile is part of the Flat::\* series. It will provide streaming-first
+profiling for CSV/TSV inputs and produce a structured report suitable for
+schema inference and validation workflows.
 
-# LICENSE
+This distribution is under active development.
 
-Copyright (C) Sergio de Sousa.
+# METHODS
 
-This library is free software; you can redistribute it and/or modify
-it under the same terms as Perl itself.
+## new
+
+    my $profiler = Flat::Profile->new(%opts);
+
+Constructor. Options are reserved for future use.
+
+## profile\_file
+
+Planned: profile an input file/stream and return a structured report.
+
+## iter\_rows
+
+Planned: return an iterator object that yields parsed row arrayrefs via
+`next_row()`.
 
 # AUTHOR
 
-Sergio de Sousa <sergio@serso.com>
+Sergio de Sousa
+
+# LICENSE
+
+This library is free software; you can redistribute it and/or modify it under
+the same terms as Perl itself.
