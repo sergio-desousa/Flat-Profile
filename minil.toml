@@ -1,0 +1,5 @@
+name = "Flat-Profile"
+badges = ["github-actions/test.yml"]
+module_maker="ModuleBuildTiny"
+static_install = "auto"
+
