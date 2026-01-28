@@ -1,4 +1,4 @@
-
+[![Actions Status](https://github.com/sergio-desousa/Flat-Profile/actions/workflows/test.yml/badge.svg?branch=main)](https://github.com/sergio-desousa/Flat-Profile/actions?workflow=test)
 # NAME
 
 Flat::Profile - Streaming-first profiling for CSV/TSV flat files

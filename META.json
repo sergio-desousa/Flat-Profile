@@ -52,6 +52,17 @@
       }
    },
    "release_status" : "unstable",
+   "resources" : {
+      "bugtracker" : {
+         "web" : "https://github.com/sergio-desousa/Flat-Profile/issues"
+      },
+      "homepage" : "https://github.com/sergio-desousa/Flat-Profile",
+      "repository" : {
+         "type" : "git",
+         "url" : "https://github.com/sergio-desousa/Flat-Profile.git",
+         "web" : "https://github.com/sergio-desousa/Flat-Profile"
+      }
+   },
    "version" : "0.01",
    "x_contributors" : [
       "Sergio de Sousa <sergio@serso.com>"
