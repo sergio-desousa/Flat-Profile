@@ -1,5 +1,3 @@
 name = "Flat-Profile"
-badges = ["github-actions/test.yml"]
-module_maker="ModuleBuildTiny"
-static_install = "auto"
-
+license = "perl_5"
+authors = ["Sergio de Sousa"]

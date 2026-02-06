@@ -30,8 +30,29 @@ sub profile_file {
 sub iter_rows {
     my ($self, %args) = @_;
 
-    # v1 implementation will return an iterator object with next_row().
-    return Flat::Profile::Iterator->new(%args);
+    if (!exists $args{path}) {
+        croak "iter_rows() requires named argument: path";
+    }
+
+    my $path = $args{path};
+
+    my $delimiter = exists $args{delimiter} ? $args{delimiter} : ",";
+    if ($delimiter ne "," && $delimiter ne "\t") {
+        croak "iter_rows() delimiter must be ',' or \"\\t\"";
+    }
+
+    my $has_header = $args{has_header} ? 1 : 0;
+
+    my $encoding = exists $args{encoding} ? $args{encoding} : "UTF-8";
+
+    open my $fh, "<:encoding($encoding)", $path
+        or croak "Failed to open '$path' for reading: $!";
+
+    return Flat::Profile::Iterator->new(
+        fh         => $fh,
+        delimiter  => $delimiter,
+        has_header => $has_header,
+    );
 }
 
 1;
@@ -50,11 +71,14 @@ Flat::Profile - Streaming-first profiling for CSV/TSV flat files
 
   my $profiler = Flat::Profile->new();
 
-  # Planned API:
-  # my $report   = $profiler->profile_file(path => "data.csv", has_header => 1);
-  my $iterator = $profiler->iter_rows(path => "data.csv", has_header => 1);
+  my $it = $profiler->iter_rows(
+      path       => "data.csv",
+      has_header => 1,
+      delimiter  => ",",
+      encoding   => "UTF-8",
+  );
 
-  while (my $row = $iterator->next_row()) {
+  while (my $row = $it->next_row) {
       # $row is an arrayref: [$v0, $v1, ...]
   }
 
@@ -68,29 +92,20 @@ This distribution is under active development.
 
 =head1 METHODS
 
-=head2 new
-
-  my $profiler = Flat::Profile->new(%opts);
-
-Constructor. Options are reserved for future use.
-
-=head2 profile_file
-
-Planned: profile an input file/stream and return a structured report.
-
 =head2 iter_rows
 
-  my $iterator = $profiler->iter_rows(%args);
+Named arguments:
 
-Returns an iterator object that yields parsed row arrayrefs via C<next_row()>.
+=over 4
 
-=head1 AUTHOR
+=item * path (required)
 
-Sergio de Sousa
+=item * delimiter (optional): C<,> or C<\\t> (default C<,>)
 
-=head1 LICENSE
+=item * has_header (optional): boolean (default false)
 
-This library is free software; you can redistribute it and/or modify it under
-the same terms as Perl itself.
+=item * encoding (optional): Perl layer encoding name (default C<UTF-8>)
+
+=back
 
 =cut

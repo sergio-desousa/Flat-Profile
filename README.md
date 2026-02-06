@@ -1,4 +1,3 @@
-[![Actions Status](https://github.com/sergio-desousa/Flat-Profile/actions/workflows/test.yml/badge.svg?branch=main)](https://github.com/sergio-desousa/Flat-Profile/actions?workflow=test)
 # NAME
 
 Flat::Profile - Streaming-first profiling for CSV/TSV flat files
@@ -9,11 +8,14 @@ Flat::Profile - Streaming-first profiling for CSV/TSV flat files
 
     my $profiler = Flat::Profile->new();
 
-    # Planned API:
-    # my $report   = $profiler->profile_file(path => "data.csv", has_header => 1);
-    my $iterator = $profiler->iter_rows(path => "data.csv", has_header => 1);
+    my $it = $profiler->iter_rows(
+        path       => "data.csv",
+        has_header => 1,
+        delimiter  => ",",
+        encoding   => "UTF-8",
+    );
 
-    while (my $row = $iterator->next_row()) {
+    while (my $row = $it->next_row) {
         # $row is an arrayref: [$v0, $v1, ...]
     }
 
@@ -27,27 +29,11 @@ This distribution is under active development.
 
 # METHODS
 
-## new
-
-    my $profiler = Flat::Profile->new(%opts);
-
-Constructor. Options are reserved for future use.
-
-## profile\_file
-
-Planned: profile an input file/stream and return a structured report.
-
 ## iter\_rows
 
-    my $iterator = $profiler->iter_rows(%args);
+Named arguments:
 
-Returns an iterator object that yields parsed row arrayrefs via `next_row()`.
-
-# AUTHOR
-
-Sergio de Sousa
-
-# LICENSE
-
-This library is free software; you can redistribute it and/or modify it under
-the same terms as Perl itself.
+- path (required)
+- delimiter (optional): `,` or `\\t` (default `,`)
+- has\_header (optional): boolean (default false)
+- encoding (optional): Perl layer encoding name (default `UTF-8`)
