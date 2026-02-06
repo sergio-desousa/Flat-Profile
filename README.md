@@ -9,9 +9,13 @@ Flat::Profile - Streaming-first profiling for CSV/TSV flat files
 
     my $profiler = Flat::Profile->new();
 
-    # Planned API (not implemented yet):
+    # Planned API:
     # my $report   = $profiler->profile_file(path => "data.csv", has_header => 1);
-    # my $iterator = $profiler->iter_rows(path => "data.csv", has_header => 1);
+    my $iterator = $profiler->iter_rows(path => "data.csv", has_header => 1);
+
+    while (my $row = $iterator->next_row()) {
+        # $row is an arrayref: [$v0, $v1, ...]
+    }
 
 # DESCRIPTION
 
@@ -35,8 +39,9 @@ Planned: profile an input file/stream and return a structured report.
 
 ## iter\_rows
 
-Planned: return an iterator object that yields parsed row arrayrefs via
-`next_row()`.
+    my $iterator = $profiler->iter_rows(%args);
+
+Returns an iterator object that yields parsed row arrayrefs via `next_row()`.
 
 # AUTHOR
 

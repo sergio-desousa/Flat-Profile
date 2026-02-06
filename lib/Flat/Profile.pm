@@ -7,6 +7,8 @@ our $VERSION = '0.01';
 
 use Carp qw(croak);
 
+use Flat::Profile::Iterator;
+
 sub new {
     my ($class, %opts) = @_;
 
@@ -29,8 +31,7 @@ sub iter_rows {
     my ($self, %args) = @_;
 
     # v1 implementation will return an iterator object with next_row().
-    # For now, this is an API stub.
-    croak "iter_rows() is not implemented yet";
+    return Flat::Profile::Iterator->new(%args);
 }
 
 1;
@@ -49,9 +50,13 @@ Flat::Profile - Streaming-first profiling for CSV/TSV flat files
 
   my $profiler = Flat::Profile->new();
 
-  # Planned API (not implemented yet):
+  # Planned API:
   # my $report   = $profiler->profile_file(path => "data.csv", has_header => 1);
-  # my $iterator = $profiler->iter_rows(path => "data.csv", has_header => 1);
+  my $iterator = $profiler->iter_rows(path => "data.csv", has_header => 1);
+
+  while (my $row = $iterator->next_row()) {
+      # $row is an arrayref: [$v0, $v1, ...]
+  }
 
 =head1 DESCRIPTION
 
@@ -75,8 +80,9 @@ Planned: profile an input file/stream and return a structured report.
 
 =head2 iter_rows
 
-Planned: return an iterator object that yields parsed row arrayrefs via
-C<next_row()>.
+  my $iterator = $profiler->iter_rows(%args);
+
+Returns an iterator object that yields parsed row arrayrefs via C<next_row()>.
 
 =head1 AUTHOR
 
