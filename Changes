@@ -2,8 +2,10 @@ Revision history for Flat-Profile
 
 {{$NEXT}}
 
-0.01 2026-02-07T22:00:40Z
-    - (development)
+0.02  2026-02-07
+    - Documentation fixes (POD as source of truth)
+    - Prevent README.md regeneration surprises during release
+    - No functional code changes
 
 0.01  2026-02-07
     - Initial CPAN release
