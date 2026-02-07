@@ -258,39 +258,197 @@ __END__
 
 Flat::Profile - Streaming-first profiling for CSV/TSV flat files
 
+=head1 SYNOPSIS
+
+    use Flat::Profile;
+
+    my $p = Flat::Profile->new();
+
+    my $it = $p->iter_rows(
+        path       => "data.csv",
+        has_header => 1,
+        delimiter  => ",",
+        encoding   => "UTF-8",
+    );
+
+    while (my $row = $it->next_row) {
+        # $row is an arrayref
+    }
+
+    my $report = $p->profile_file(
+        path        => "data.csv",
+        has_header  => 1,
+        delimiter   => ",",
+        null_empty  => 1,
+        null_tokens => ["NULL", "NA"],
+        example_cap => 10,
+        max_errors  => 1000,
+    );
+
 =head1 DESCRIPTION
 
-Flat::Profile is part of the Flat::* series and provides streaming-first profiling
-for CSV/TSV inputs.
+Flat::Profile is part of the Flat::* series. It provides streaming-first profiling
+for CSV/TSV inputs for practical ETL and legacy data workflows.
 
-=head1 REPORT FORMAT
-
-The return value of C<profile_file()> is a hashref with stable top-level metadata:
+Design goals:
 
 =over 4
 
-=item * report_version (integer)
+=item *
 
-=item * generated_at (UTC timestamp string)
+Streaming-first (single pass, predictable memory)
 
-=item * perl_version (numeric C<$]>)
+=item *
 
-=item * module_version (string C<$VERSION>)
+Practical diagnostics (ragged rows, null policy, examples)
+
+=item *
+
+Stable report format intended to feed Flat::Schema / Flat::Validate
 
 =back
 
 =head1 METHODS
 
-=head2 profile_file
+=head2 new
 
-Supports configurable null policies:
+    my $p = Flat::Profile->new();
+
+Constructor. Takes named arguments (currently reserved for future configuration).
+
+=head2 iter_rows
+
+    my $it = $p->iter_rows(%args);
+
+Returns an iterator object (L<Flat::Profile::Iterator>).
+
+Required named arguments:
 
 =over 4
 
-=item * null_empty (default true): treat empty string as null
-
-=item * null_tokens (default empty): treat exact-matching tokens as null
+=item * path
 
 =back
+
+Common named arguments:
+
+=over 4
+
+=item * has_header (boolean)
+
+=item * delimiter ("," or "\t")
+
+=item * encoding (default "UTF-8")
+
+=back
+
+=head2 profile_file
+
+    my $report = $p->profile_file(%args);
+
+Profiles a CSV/TSV file in a streaming pass and returns a hashref report.
+
+Key named arguments include:
+
+=over 4
+
+=item * path (required)
+
+=item * has_header
+
+=item * delimiter
+
+=item * encoding
+
+=item * null_empty (default true)
+
+=item * null_tokens (arrayref; default empty)
+
+=item * example_cap (default 10)
+
+=item * max_errors (threshold stop; default 1000)
+
+=back
+
+=head1 NULL SEMANTICS
+
+By default, empty string is treated as null:
+
+    null_empty => 1   # default
+
+To treat empty string as a value:
+
+    null_empty => 0
+
+You can also treat specific exact tokens as null:
+
+    null_tokens => ["NULL", "N/A"]
+
+Notes:
+
+=over 4
+
+=item *
+
+Token matching is exact (no trimming, case-sensitive) in v1.
+
+=item *
+
+undef is always treated as null.
+
+=back
+
+=head1 RAGGED ROWS
+
+Flat::Profile tracks width mismatches relative to an expected width:
+
+=over 4
+
+=item *
+
+If has_header is true, expected width is the header width.
+
+=item *
+
+Otherwise, expected width is the first data row width.
+
+=back
+
+Row numbers in ragged examples use B<data-row numbering> (header excluded):
+the first data row is row_number 1.
+
+=head1 REPORT FORMAT
+
+profile_file() returns a hashref with stable top-level metadata including:
+
+=over 4
+
+=item * report_version
+
+=item * generated_at (UTC timestamp string)
+
+=item * perl_version
+
+=item * module_version
+
+=item * header (arrayref or undef)
+
+=item * rows (data rows processed; header excluded)
+
+=item * ragged (counts + capped examples)
+
+=item * columns (arrayref of per-column stats)
+
+=back
+
+=head1 AUTHOR
+
+Sergio de Sousa
+
+Issues: https://github.com/sergio-desousa/Flat-Profile/issues
+
+=head1 LICENSE
+
+Perl 5 (Artistic/GPL dual).
 
 =cut
