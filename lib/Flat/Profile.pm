@@ -42,6 +42,11 @@ sub profile_file {
         croak "profile_file() example_cap must be an integer >= 0";
     }
 
+    # Configurable null semantics:
+    # - null_empty => 1 (default): empty string counts as null
+    # - null_empty => 0: empty string counts as a value
+    my $null_empty = exists $args{null_empty} ? ($args{null_empty} ? 1 : 0) : 1;
+
     open my $fh, "<:encoding($encoding)", $path
         or croak "Failed to open '$path' for reading: $!";
 
@@ -52,13 +57,14 @@ sub profile_file {
     );
 
     my %report = (
-        path       => $path,
-        delimiter  => $delimiter,
-        encoding   => $encoding,
-        has_header => $has_header ? 1 : 0,
-        header     => undef,
-        rows       => 0,
-        columns    => [],
+        path        => $path,
+        delimiter   => $delimiter,
+        encoding    => $encoding,
+        has_header  => $has_header ? 1 : 0,
+        null_empty  => $null_empty ? 1 : 0,
+        header      => undef,
+        rows        => 0,
+        columns     => [],
     );
 
     my $header_captured = 0;
@@ -67,7 +73,6 @@ sub profile_file {
         $report{rows}++;
 
         if ($has_header && !$header_captured) {
-            # Header is captured when iteration starts (after first next_row)
             $report{header} = $it->get_Header;
             $header_captured = 1;
         }
@@ -94,8 +99,11 @@ sub profile_file {
 
             $col->{count_values}++;
 
-            # Null semantics v1: undef or empty string counts as null
-            if (!defined $value || $value eq '') {
+            my $is_null =
+                !defined $value
+                || ($null_empty && defined $value && $value eq '');
+
+            if ($is_null) {
                 $col->{count_null}++;
                 next;
             }
@@ -122,7 +130,6 @@ sub profile_file {
         }
     }
 
-    # Normalize: remove internal keys
     for my $col (@{$report{columns}}) {
         next if !defined $col;
         delete $col->{_sample_seen};
@@ -176,26 +183,41 @@ Flat::Profile - Streaming-first profiling for CSV/TSV flat files
   my $profiler = Flat::Profile->new();
 
   my $report = $profiler->profile_file(
-      path       => "data.csv",
-      has_header => 1,
+      path        => "data.csv",
+      has_header  => 1,
+      null_empty  => 1,   # default
+      example_cap => 10,
   );
 
   my $it = $profiler->iter_rows(
       path       => "data.csv",
       has_header => 1,
+      delimiter  => ",",
   );
+
+  while (my $row = $it->next_row) {
+      # $row is an arrayref: [$v0, $v1, ...]
+  }
 
 =head1 DESCRIPTION
 
-Flat::Profile is part of the Flat::* series.
+Flat::Profile is part of the Flat::* series and provides streaming-first profiling
+for CSV/TSV inputs.
+
+This is early-stage code intended to support practical ETL workflows, with a focus
+on predictable behavior for large files.
 
 =head1 METHODS
 
-=head2 profile_file
+=head2 new
 
-Profiles an input file in a single streaming pass and returns a hashref report.
+Constructor.
 
-Named arguments:
+=head2 iter_rows
+
+Returns an iterator yielding row arrayrefs via C<next_row()>.
+
+Arguments:
 
 =over 4
 
@@ -207,12 +229,30 @@ Named arguments:
 
 =item * encoding (optional): Perl layer encoding name (default C<UTF-8>)
 
+=back
+
+=head2 profile_file
+
+Profiles an input file in a single streaming pass and returns a hashref report
+with per-column counts, lengths, and sample values.
+
+Arguments (in addition to C<iter_rows> arguments):
+
+=over 4
+
 =item * example_cap (optional): max unique sample values per column (default 10)
+
+=item * null_empty (optional): if true (default), empty string counts as null
 
 =back
 
-=head2 iter_rows
+=head1 AUTHOR
 
-Returns an iterator object that yields parsed row arrayrefs via C<next_row()>.
+Sergio de Sousa
+
+=head1 LICENSE
+
+This library is free software; you can redistribute it and/or modify it under
+the same terms as Perl itself.
 
 =cut
