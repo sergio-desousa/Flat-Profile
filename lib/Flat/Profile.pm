@@ -66,7 +66,15 @@ sub profile_file {
         has_header => $has_header,
     );
 
+    my $generated_at = _format_utc_timestamp();
+
     my %report = (
+        report_version => 1,
+
+        generated_at   => $generated_at,
+        perl_version   => $],
+        module_version => $VERSION,
+
         path        => $path,
         delimiter   => $delimiter,
         encoding    => $encoding,
@@ -228,6 +236,18 @@ sub iter_rows {
     );
 }
 
+sub _format_utc_timestamp {
+    my @t = gmtime(time());
+    my $year = $t[5] + 1900;
+    my $mon  = $t[4] + 1;
+    my $day  = $t[3];
+    my $hour = $t[2];
+    my $min  = $t[1];
+    my $sec  = $t[0];
+
+    return sprintf("%04d-%02d-%02dT%02d:%02d:%02dZ", $year, $mon, $day, $hour, $min, $sec);
+}
+
 1;
 
 __END__
@@ -242,6 +262,22 @@ Flat::Profile - Streaming-first profiling for CSV/TSV flat files
 
 Flat::Profile is part of the Flat::* series and provides streaming-first profiling
 for CSV/TSV inputs.
+
+=head1 REPORT FORMAT
+
+The return value of C<profile_file()> is a hashref with stable top-level metadata:
+
+=over 4
+
+=item * report_version (integer)
+
+=item * generated_at (UTC timestamp string)
+
+=item * perl_version (numeric C<$]>)
+
+=item * module_version (string C<$VERSION>)
+
+=back
 
 =head1 METHODS
 
