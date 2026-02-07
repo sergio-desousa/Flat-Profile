@@ -29,8 +29,14 @@ sub new {
         _fh         => $opts{fh},
         _csv        => $csv,
         _has_header => $opts{has_header} ? 1 : 0,
+
+        # Row index counts *data rows returned* (header excluded).
         _row_index  => 0,
+
+        # Header row (arrayref) if has_header enabled and header consumed.
         _header     => undef,
+
+        # Internal: whether we've processed header (if any).
         _started    => 0,
     }, $class;
 
@@ -45,7 +51,7 @@ sub next_row {
         $self->{_started} = 1;
 
         if ($self->{_has_header}) {
-            my $header_row = $self->_read_row();
+            my $header_row = $self->_read_row_raw();
             if (!defined $header_row) {
                 return undef; # empty file
             }
@@ -53,10 +59,15 @@ sub next_row {
         }
     }
 
-    return $self->_read_row();
+    my $row = $self->_read_row_raw();
+    if (defined $row) {
+        $self->{_row_index}++;
+    }
+
+    return $row;
 }
 
-sub _read_row {
+sub _read_row_raw {
     my ($self) = @_;
 
     my $fh  = $self->{_fh};
@@ -67,7 +78,6 @@ sub _read_row {
 
         if ($row) {
             my @fields = @{$row};
-            $self->{_row_index}++;
             return \@fields;
         }
 
