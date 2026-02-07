@@ -2,7 +2,7 @@ Revision history for Flat-Profile
 
 {{$NEXT}}
 
-0.02  2026-02-07
+0.02 2026-02-07T23:12:47Z
     - Documentation fixes (POD as source of truth)
     - Prevent README.md regeneration surprises during release
     - No functional code changes
