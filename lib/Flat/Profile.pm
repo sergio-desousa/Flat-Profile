@@ -44,6 +44,19 @@ sub profile_file {
 
     my $null_empty = exists $args{null_empty} ? ($args{null_empty} ? 1 : 0) : 1;
 
+    my $null_tokens = exists $args{null_tokens} ? $args{null_tokens} : [];
+    if (ref($null_tokens) ne 'ARRAY') {
+        croak "profile_file() null_tokens must be an arrayref";
+    }
+
+    my %null_token_map;
+    for my $tok (@{$null_tokens}) {
+        if (!defined $tok) {
+            croak "profile_file() null_tokens must not contain undef";
+        }
+        $null_token_map{$tok} = 1;
+    }
+
     open my $fh, "<:encoding($encoding)", $path
         or croak "Failed to open '$path' for reading: $!";
 
@@ -59,19 +72,19 @@ sub profile_file {
         encoding    => $encoding,
         has_header  => $has_header ? 1 : 0,
         null_empty  => $null_empty ? 1 : 0,
+        null_tokens => [ @{$null_tokens} ],
         header      => undef,
 
         rows        => 0,
         columns     => [],
 
-        # Ragged-row tracking (data rows only; header excluded)
         expected_width     => undef,
         max_observed_width => 0,
         ragged => {
             short_rows => 0,
             long_rows  => 0,
-            short_examples => [], # [{row_number => N, width => W}, ...]
-            long_examples  => [], # [{row_number => N, width => W}, ...]
+            short_examples => [],
+            long_examples  => [],
             example_cap    => 10,
         },
     );
@@ -86,7 +99,6 @@ sub profile_file {
             $report{header} = $it->get_Header;
             $header_captured = 1;
 
-            # Prefer header width as expected width when has_header enabled
             if (defined $report{header}) {
                 $report{expected_width} = scalar @{$report{header}};
             }
@@ -97,7 +109,6 @@ sub profile_file {
             $report{max_observed_width} = $width;
         }
 
-        # If no expected width yet (no header), use first data row width
         if (!defined $report{expected_width}) {
             $report{expected_width} = $width;
         }
@@ -149,7 +160,8 @@ sub profile_file {
 
             my $is_null =
                 !defined $value
-                || ($null_empty && defined $value && $value eq '');
+                || ($null_empty && defined $value && $value eq '')
+                || (defined $value && $null_token_map{$value});
 
             if ($is_null) {
                 $col->{count_null}++;
@@ -226,19 +238,6 @@ __END__
 
 Flat::Profile - Streaming-first profiling for CSV/TSV flat files
 
-=head1 SYNOPSIS
-
-  use Flat::Profile;
-
-  my $profiler = Flat::Profile->new();
-
-  my $report = $profiler->profile_file(
-      path        => "data.csv",
-      has_header  => 1,
-      null_empty  => 1,
-      example_cap => 10,
-  );
-
 =head1 DESCRIPTION
 
 Flat::Profile is part of the Flat::* series and provides streaming-first profiling
@@ -248,21 +247,14 @@ for CSV/TSV inputs.
 
 =head2 profile_file
 
-Profiles an input file in a single streaming pass and returns a hashref report.
+Supports configurable null policies:
 
-Adds C<ragged> diagnostics for short/long rows compared to the expected width.
+=over 4
 
-=head2 iter_rows
+=item * null_empty (default true): treat empty string as null
 
-Returns an iterator yielding row arrayrefs via C<next_row()>.
+=item * null_tokens (default empty): treat exact-matching tokens as null
 
-=head1 AUTHOR
-
-Sergio de Sousa
-
-=head1 LICENSE
-
-This library is free software; you can redistribute it and/or modify it under
-the same terms as Perl itself.
+=back
 
 =cut
