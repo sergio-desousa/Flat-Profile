@@ -42,9 +42,6 @@ sub profile_file {
         croak "profile_file() example_cap must be an integer >= 0";
     }
 
-    # Configurable null semantics:
-    # - null_empty => 1 (default): empty string counts as null
-    # - null_empty => 0: empty string counts as a value
     my $null_empty = exists $args{null_empty} ? ($args{null_empty} ? 1 : 0) : 1;
 
     open my $fh, "<:encoding($encoding)", $path
@@ -63,10 +60,23 @@ sub profile_file {
         has_header  => $has_header ? 1 : 0,
         null_empty  => $null_empty ? 1 : 0,
         header      => undef,
+
         rows        => 0,
         columns     => [],
+
+        # Ragged-row tracking (data rows only; header excluded)
+        expected_width     => undef,
+        max_observed_width => 0,
+        ragged => {
+            short_rows => 0,
+            long_rows  => 0,
+            short_examples => [], # [{row_number => N, width => W}, ...]
+            long_examples  => [], # [{row_number => N, width => W}, ...]
+            example_cap    => 10,
+        },
     );
 
+    my $ragged_example_cap = 10;
     my $header_captured = 0;
 
     while (my $row = $it->next_row) {
@@ -75,9 +85,47 @@ sub profile_file {
         if ($has_header && !$header_captured) {
             $report{header} = $it->get_Header;
             $header_captured = 1;
+
+            # Prefer header width as expected width when has_header enabled
+            if (defined $report{header}) {
+                $report{expected_width} = scalar @{$report{header}};
+            }
         }
 
-        my $num_cols = scalar @{$row};
+        my $width = scalar @{$row};
+        if ($width > $report{max_observed_width}) {
+            $report{max_observed_width} = $width;
+        }
+
+        # If no expected width yet (no header), use first data row width
+        if (!defined $report{expected_width}) {
+            $report{expected_width} = $width;
+        }
+
+        if (defined $report{expected_width}) {
+            if ($width < $report{expected_width}) {
+                $report{ragged}{short_rows}++;
+
+                if (@{$report{ragged}{short_examples}} < $ragged_example_cap) {
+                    push @{$report{ragged}{short_examples}}, {
+                        row_number => $report{rows},
+                        width      => $width,
+                    };
+                }
+            }
+            elsif ($width > $report{expected_width}) {
+                $report{ragged}{long_rows}++;
+
+                if (@{$report{ragged}{long_examples}} < $ragged_example_cap) {
+                    push @{$report{ragged}{long_examples}}, {
+                        row_number => $report{rows},
+                        width      => $width,
+                    };
+                }
+            }
+        }
+
+        my $num_cols = $width;
 
         for (my $i = 0; $i < $num_cols; $i++) {
             my $value = $row->[$i];
@@ -135,6 +183,8 @@ sub profile_file {
         delete $col->{_sample_seen};
     }
 
+    $report{ragged}{example_cap} = $ragged_example_cap;
+
     return \%report;
 }
 
@@ -185,66 +235,26 @@ Flat::Profile - Streaming-first profiling for CSV/TSV flat files
   my $report = $profiler->profile_file(
       path        => "data.csv",
       has_header  => 1,
-      null_empty  => 1,   # default
+      null_empty  => 1,
       example_cap => 10,
   );
-
-  my $it = $profiler->iter_rows(
-      path       => "data.csv",
-      has_header => 1,
-      delimiter  => ",",
-  );
-
-  while (my $row = $it->next_row) {
-      # $row is an arrayref: [$v0, $v1, ...]
-  }
 
 =head1 DESCRIPTION
 
 Flat::Profile is part of the Flat::* series and provides streaming-first profiling
 for CSV/TSV inputs.
 
-This is early-stage code intended to support practical ETL workflows, with a focus
-on predictable behavior for large files.
-
 =head1 METHODS
 
-=head2 new
+=head2 profile_file
 
-Constructor.
+Profiles an input file in a single streaming pass and returns a hashref report.
+
+Adds C<ragged> diagnostics for short/long rows compared to the expected width.
 
 =head2 iter_rows
 
 Returns an iterator yielding row arrayrefs via C<next_row()>.
-
-Arguments:
-
-=over 4
-
-=item * path (required)
-
-=item * delimiter (optional): C<,> or C<\\t> (default C<,>)
-
-=item * has_header (optional): boolean (default false)
-
-=item * encoding (optional): Perl layer encoding name (default C<UTF-8>)
-
-=back
-
-=head2 profile_file
-
-Profiles an input file in a single streaming pass and returns a hashref report
-with per-column counts, lengths, and sample values.
-
-Arguments (in addition to C<iter_rows> arguments):
-
-=over 4
-
-=item * example_cap (optional): max unique sample values per column (default 10)
-
-=item * null_empty (optional): if true (default), empty string counts as null
-
-=back
 
 =head1 AUTHOR
 
