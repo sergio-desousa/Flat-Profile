@@ -22,9 +22,113 @@ sub new {
 sub profile_file {
     my ($self, %args) = @_;
 
-    # v1 implementation will be streaming-first and return a structured report.
-    # For now, this is an API stub.
-    croak "profile_file() is not implemented yet";
+    if (!exists $args{path}) {
+        croak "profile_file() requires named argument: path";
+    }
+
+    my $path = $args{path};
+
+    my $delimiter = exists $args{delimiter} ? $args{delimiter} : ",";
+    if ($delimiter ne "," && $delimiter ne "\t") {
+        croak "profile_file() delimiter must be ',' or \"\\t\"";
+    }
+
+    my $has_header = $args{has_header} ? 1 : 0;
+
+    my $encoding = exists $args{encoding} ? $args{encoding} : "UTF-8";
+
+    my $example_cap = exists $args{example_cap} ? $args{example_cap} : 10;
+    if ($example_cap !~ /^\d+$/ || $example_cap < 0) {
+        croak "profile_file() example_cap must be an integer >= 0";
+    }
+
+    open my $fh, "<:encoding($encoding)", $path
+        or croak "Failed to open '$path' for reading: $!";
+
+    my $it = Flat::Profile::Iterator->new(
+        fh         => $fh,
+        delimiter  => $delimiter,
+        has_header => $has_header,
+    );
+
+    my %report = (
+        path       => $path,
+        delimiter  => $delimiter,
+        encoding   => $encoding,
+        has_header => $has_header ? 1 : 0,
+        header     => undef,
+        rows       => 0,
+        columns    => [],
+    );
+
+    my $header_captured = 0;
+
+    while (my $row = $it->next_row) {
+        $report{rows}++;
+
+        if ($has_header && !$header_captured) {
+            # Header is captured when iteration starts (after first next_row)
+            $report{header} = $it->get_Header;
+            $header_captured = 1;
+        }
+
+        my $num_cols = scalar @{$row};
+
+        for (my $i = 0; $i < $num_cols; $i++) {
+            my $value = $row->[$i];
+
+            my $col = $report{columns}->[$i];
+            if (!defined $col) {
+                $col = {
+                    index         => $i,
+                    count_values  => 0,
+                    count_null    => 0,
+                    count_nonnull => 0,
+                    min_length    => undef,
+                    max_length    => undef,
+                    sample_values => [],
+                    _sample_seen  => {},
+                };
+                $report{columns}->[$i] = $col;
+            }
+
+            $col->{count_values}++;
+
+            # Null semantics v1: undef or empty string counts as null
+            if (!defined $value || $value eq '') {
+                $col->{count_null}++;
+                next;
+            }
+
+            $col->{count_nonnull}++;
+
+            my $len = length($value);
+
+            if (!defined $col->{min_length} || $len < $col->{min_length}) {
+                $col->{min_length} = $len;
+            }
+            if (!defined $col->{max_length} || $len > $col->{max_length}) {
+                $col->{max_length} = $len;
+            }
+
+            if ($example_cap > 0) {
+                if (@{$col->{sample_values}} < $example_cap) {
+                    if (!$col->{_sample_seen}{$value}) {
+                        push @{$col->{sample_values}}, $value;
+                        $col->{_sample_seen}{$value} = 1;
+                    }
+                }
+            }
+        }
+    }
+
+    # Normalize: remove internal keys
+    for my $col (@{$report{columns}}) {
+        next if !defined $col;
+        delete $col->{_sample_seen};
+    }
+
+    return \%report;
 }
 
 sub iter_rows {
@@ -71,28 +175,25 @@ Flat::Profile - Streaming-first profiling for CSV/TSV flat files
 
   my $profiler = Flat::Profile->new();
 
+  my $report = $profiler->profile_file(
+      path       => "data.csv",
+      has_header => 1,
+  );
+
   my $it = $profiler->iter_rows(
       path       => "data.csv",
       has_header => 1,
-      delimiter  => ",",
-      encoding   => "UTF-8",
   );
-
-  while (my $row = $it->next_row) {
-      # $row is an arrayref: [$v0, $v1, ...]
-  }
 
 =head1 DESCRIPTION
 
-Flat::Profile is part of the Flat::* series. It will provide streaming-first
-profiling for CSV/TSV inputs and produce a structured report suitable for
-schema inference and validation workflows.
-
-This distribution is under active development.
+Flat::Profile is part of the Flat::* series.
 
 =head1 METHODS
 
-=head2 iter_rows
+=head2 profile_file
+
+Profiles an input file in a single streaming pass and returns a hashref report.
 
 Named arguments:
 
@@ -106,6 +207,12 @@ Named arguments:
 
 =item * encoding (optional): Perl layer encoding name (default C<UTF-8>)
 
+=item * example_cap (optional): max unique sample values per column (default 10)
+
 =back
+
+=head2 iter_rows
+
+Returns an iterator object that yields parsed row arrayrefs via C<next_row()>.
 
 =cut
