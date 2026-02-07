@@ -1,6 +1,14 @@
-Revision history for Perl extension Flat-Profile
+Revision history for Flat-Profile
+
+Revision history for Flat-Profile
+
+0.01  2026-02-07
+    - Initial CPAN release
+    - Streaming CSV/TSV iterator (iter_rows)
+    - Streaming file profiler (profile_file)
+    - Configurable null policies (null_empty, null_tokens)
+    - Ragged row diagnostics (short/long rows; data-row numbering)
+    - Stable report format with metadata (report_version, generated_at, versions)
 
 {{$NEXT}}
-
-    - original version
 
